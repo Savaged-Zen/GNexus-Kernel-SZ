@@ -1,0 +1,16 @@
+***************
+*** 53,58 ****
+  	select HAVE_PERF_EVENTS
+  	select PERF_USE_VMALLOC
+  	select IRQ_PREFLOW_FASTEOI
+  
+  config ARCH_DEFCONFIG
+  	string
+--- 53,59 ----
+  	select HAVE_PERF_EVENTS
+  	select PERF_USE_VMALLOC
+  	select IRQ_PREFLOW_FASTEOI
++ 	select HAVE_C_RECORDMCOUNT
+  
+  config ARCH_DEFCONFIG
+  	string

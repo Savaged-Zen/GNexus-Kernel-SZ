@@ -1,0 +1,170 @@
+***************
+*** 846,852 ****
+  	readl(phba->sli4_hba.conf_regs_memmap_p + LPFC_CTL_PDEV_CTL_OFFSET);
+  
+  	/* delay driver action following IF_TYPE_2 reset */
+- 	msleep(100);
+  
+  	init_completion(&online_compl);
+  	rc = lpfc_workq_post_event(phba, &status, &online_compl,
+--- 887,896 ----
+  	readl(phba->sli4_hba.conf_regs_memmap_p + LPFC_CTL_PDEV_CTL_OFFSET);
+  
+  	/* delay driver action following IF_TYPE_2 reset */
++ 	rc = lpfc_sli4_pdev_status_reg_wait(phba);
++ 
++ 	if (rc)
++ 		return -EIO;
+  
+  	init_completion(&online_compl);
+  	rc = lpfc_workq_post_event(phba, &status, &online_compl,
+***************
+*** 936,941 ****
+  
+  	if (!phba->cfg_enable_hba_reset)
+  		return -EACCES;
+  	init_completion(&online_compl);
+  
+  	if(strncmp(buf, "online", sizeof("online") - 1) == 0) {
+--- 980,989 ----
+  
+  	if (!phba->cfg_enable_hba_reset)
+  		return -EACCES;
++ 
++ 	lpfc_printf_vlog(vport, KERN_ERR, LOG_INIT,
++ 		"3050 lpfc_board_mode set to %s\n", buf);
++ 
+  	init_completion(&online_compl);
+  
+  	if(strncmp(buf, "online", sizeof("online") - 1) == 0) {
+***************
+*** 1425,1504 ****
+  	struct Scsi_Host *shost = class_to_shost(dev);
+  	struct lpfc_vport *vport = (struct lpfc_vport *) shost->hostdata;
+  	struct lpfc_hba *phba = vport->phba;
+- 	struct pci_dev *pdev = phba->pcidev;
+- 	union  lpfc_sli4_cfg_shdr *shdr;
+- 	uint32_t shdr_status, shdr_add_status;
+- 	LPFC_MBOXQ_t *mboxq;
+- 	struct lpfc_mbx_get_prof_cfg *get_prof_cfg;
+- 	struct lpfc_rsrc_desc_pcie *desc;
+- 	uint32_t max_nr_virtfn;
+- 	uint32_t desc_count;
+- 	int length, rc, i;
+- 
+- 	if ((phba->sli_rev < LPFC_SLI_REV4) ||
+- 	    (bf_get(lpfc_sli_intf_if_type, &phba->sli4_hba.sli_intf) !=
+- 	     LPFC_SLI_INTF_IF_TYPE_2))
+- 		return -EPERM;
+- 
+- 	if (!pdev->is_physfn)
+- 		return snprintf(buf, PAGE_SIZE, "%d\n", 0);
+- 
+- 	mboxq = (LPFC_MBOXQ_t *)mempool_alloc(phba->mbox_mem_pool, GFP_KERNEL);
+- 	if (!mboxq)
+- 		return -ENOMEM;
+- 
+- 	/* get the maximum number of virtfn support by physfn */
+- 	length = (sizeof(struct lpfc_mbx_get_prof_cfg) -
+- 		  sizeof(struct lpfc_sli4_cfg_mhdr));
+- 	lpfc_sli4_config(phba, mboxq, LPFC_MBOX_SUBSYSTEM_COMMON,
+- 			 LPFC_MBOX_OPCODE_GET_PROFILE_CONFIG,
+- 			 length, LPFC_SLI4_MBX_EMBED);
+- 	shdr = (union lpfc_sli4_cfg_shdr *)
+- 		&mboxq->u.mqe.un.sli4_config.header.cfg_shdr;
+- 	bf_set(lpfc_mbox_hdr_pf_num, &shdr->request,
+- 	       phba->sli4_hba.iov.pf_number + 1);
+- 
+- 	get_prof_cfg = &mboxq->u.mqe.un.get_prof_cfg;
+- 	bf_set(lpfc_mbx_get_prof_cfg_prof_tp, &get_prof_cfg->u.request,
+- 	       LPFC_CFG_TYPE_CURRENT_ACTIVE);
+- 
+- 	rc = lpfc_sli_issue_mbox_wait(phba, mboxq,
+- 				lpfc_mbox_tmo_val(phba, MBX_SLI4_CONFIG));
+  
+- 	if (rc != MBX_TIMEOUT) {
+- 		/* check return status */
+- 		shdr_status = bf_get(lpfc_mbox_hdr_status, &shdr->response);
+- 		shdr_add_status = bf_get(lpfc_mbox_hdr_add_status,
+- 					 &shdr->response);
+- 		if (shdr_status || shdr_add_status || rc)
+- 			goto error_out;
+- 
+- 	} else
+- 		goto error_out;
+- 
+- 	desc_count = get_prof_cfg->u.response.prof_cfg.rsrc_desc_count;
+- 
+- 	for (i = 0; i < LPFC_RSRC_DESC_MAX_NUM; i++) {
+- 		desc = (struct lpfc_rsrc_desc_pcie *)
+- 			&get_prof_cfg->u.response.prof_cfg.desc[i];
+- 		if (LPFC_RSRC_DESC_TYPE_PCIE ==
+- 		    bf_get(lpfc_rsrc_desc_pcie_type, desc)) {
+- 			max_nr_virtfn = bf_get(lpfc_rsrc_desc_pcie_nr_virtfn,
+- 					       desc);
+- 			break;
+- 		}
+- 	}
+- 
+- 	if (i < LPFC_RSRC_DESC_MAX_NUM) {
+- 		if (rc != MBX_TIMEOUT)
+- 			mempool_free(mboxq, phba->mbox_mem_pool);
+- 		return snprintf(buf, PAGE_SIZE, "%d\n", max_nr_virtfn);
+- 	}
+- 
+- error_out:
+- 	if (rc != MBX_TIMEOUT)
+- 		mempool_free(mboxq, phba->mbox_mem_pool);
+- 	return -EIO;
+  }
+  
+  /**
+--- 1477,1486 ----
+  	struct Scsi_Host *shost = class_to_shost(dev);
+  	struct lpfc_vport *vport = (struct lpfc_vport *) shost->hostdata;
+  	struct lpfc_hba *phba = vport->phba;
++ 	uint16_t max_nr_virtfn;
+  
++ 	max_nr_virtfn = lpfc_sli_sriov_nr_virtfn_get(phba);
++ 	return snprintf(buf, PAGE_SIZE, "%d\n", max_nr_virtfn);
+  }
+  
+  /**
+***************
+*** 3521,3526 ****
+  	if (sscanf(val_buf, "%i", &val) != 1)
+  		return -EINVAL;
+  
+  	if (((val == LPFC_USER_LINK_SPEED_1G) && !(phba->lmt & LMT_1Gb)) ||
+  	    ((val == LPFC_USER_LINK_SPEED_2G) && !(phba->lmt & LMT_2Gb)) ||
+  	    ((val == LPFC_USER_LINK_SPEED_4G) && !(phba->lmt & LMT_4Gb)) ||
+--- 3512,3521 ----
+  	if (sscanf(val_buf, "%i", &val) != 1)
+  		return -EINVAL;
+  
++ 	lpfc_printf_vlog(vport, KERN_ERR, LOG_INIT,
++ 		"3055 lpfc_link_speed changed from %d to %d %s\n",
++ 		phba->cfg_link_speed, val, nolip ? "(nolip)" : "(lip)");
++ 
+  	if (((val == LPFC_USER_LINK_SPEED_1G) && !(phba->lmt & LMT_1Gb)) ||
+  	    ((val == LPFC_USER_LINK_SPEED_2G) && !(phba->lmt & LMT_2Gb)) ||
+  	    ((val == LPFC_USER_LINK_SPEED_4G) && !(phba->lmt & LMT_4Gb)) ||
+***************
+*** 4098,4104 ****
+  #	- Default will result in registering capabilities for all profiles.
+  #
+  */
+- unsigned int lpfc_prot_mask = SHOST_DIF_TYPE1_PROTECTION;
+  
+  module_param(lpfc_prot_mask, uint, S_IRUGO);
+  MODULE_PARM_DESC(lpfc_prot_mask, "host protection mask");
+--- 4093,4101 ----
+  #	- Default will result in registering capabilities for all profiles.
+  #
+  */
++ unsigned int lpfc_prot_mask = SHOST_DIF_TYPE1_PROTECTION |
++ 			      SHOST_DIX_TYPE0_PROTECTION |
++ 			      SHOST_DIX_TYPE1_PROTECTION;
+  
+  module_param(lpfc_prot_mask, uint, S_IRUGO);
+  MODULE_PARM_DESC(lpfc_prot_mask, "host protection mask");

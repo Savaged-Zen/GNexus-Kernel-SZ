@@ -1,0 +1,23 @@
+***************
+*** 259,268 ****
+  
+  #define ATOMIC64_INIT(i) ((atomic64_t) { (i) })
+  
+- static __inline__ int
+  __atomic64_add_return(s64 i, atomic64_t *v)
+  {
+- 	int ret;
+  	unsigned long flags;
+  	_atomic_spin_lock_irqsave(v, flags);
+  
+--- 259,268 ----
+  
+  #define ATOMIC64_INIT(i) ((atomic64_t) { (i) })
+  
++ static __inline__ s64
+  __atomic64_add_return(s64 i, atomic64_t *v)
+  {
++ 	s64 ret;
+  	unsigned long flags;
+  	_atomic_spin_lock_irqsave(v, flags);
+  

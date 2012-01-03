@@ -1,0 +1,17 @@
+***************
+*** 15278,15284 ****
+  
+  		cancel_work_sync(&tp->reset_task);
+  
+- 		if (tg3_flag(tp, USE_PHYLIB)) {
+  			tg3_phy_fini(tp);
+  			tg3_mdio_fini(tp);
+  		}
+--- 15278,15284 ----
+  
+  		cancel_work_sync(&tp->reset_task);
+  
++ 		if (!tg3_flag(tp, USE_PHYLIB)) {
+  			tg3_phy_fini(tp);
+  			tg3_mdio_fini(tp);
+  		}

@@ -1,0 +1,93 @@
+***************
+*** 1054,1067 ****
+  	 * time required to reach a stable voltage.
+  	 */
+  	mmc_delay(10);
+- 
+- 	mmc_host_clk_release(host);
+  }
+  
+- void mmc_power_off(struct mmc_host *host)
+  {
+- 	mmc_host_clk_hold(host);
+- 
+  	host->ios.clock = 0;
+  	host->ios.vdd = 0;
+  
+--- 1033,1042 ----
+  	 * time required to reach a stable voltage.
+  	 */
+  	mmc_delay(10);
+  }
+  
++ static void mmc_power_off(struct mmc_host *host)
+  {
+  	host->ios.clock = 0;
+  	host->ios.vdd = 0;
+  
+***************
+*** 1147,1153 ****
+  }
+  
+  /*
+-  * Remove the current bus handler from a host.
+   */
+  void mmc_detach_bus(struct mmc_host *host)
+  {
+--- 1120,1127 ----
+  }
+  
+  /*
++  * Remove the current bus handler from a host. Assumes that there are
++  * no interesting cards left, so the bus is powered down.
+   */
+  void mmc_detach_bus(struct mmc_host *host)
+  {
+***************
+*** 1653,1659 ****
+  
+  		mmc_claim_host(host);
+  		mmc_detach_bus(host);
+- 		mmc_power_off(host);
+  		mmc_release_host(host);
+  		mmc_bus_put(host);
+  		return;
+--- 1629,1634 ----
+  
+  		mmc_claim_host(host);
+  		mmc_detach_bus(host);
+  		mmc_release_host(host);
+  		mmc_bus_put(host);
+  		return;
+***************
+*** 1775,1781 ****
+  				host->bus_ops->remove(host);
+  			mmc_claim_host(host);
+  			mmc_detach_bus(host);
+- 			mmc_power_off(host);
+  			mmc_release_host(host);
+  			host->pm_flags = 0;
+  			err = 0;
+--- 1750,1755 ----
+  				host->bus_ops->remove(host);
+  			mmc_claim_host(host);
+  			mmc_detach_bus(host);
+  			mmc_release_host(host);
+  			host->pm_flags = 0;
+  			err = 0;
+***************
+*** 1863,1869 ****
+  			host->bus_ops->remove(host);
+  
+  		mmc_detach_bus(host);
+- 		mmc_power_off(host);
+  		mmc_release_host(host);
+  		host->pm_flags = 0;
+  		break;
+--- 1837,1842 ----
+  			host->bus_ops->remove(host);
+  
+  		mmc_detach_bus(host);
+  		mmc_release_host(host);
+  		host->pm_flags = 0;
+  		break;

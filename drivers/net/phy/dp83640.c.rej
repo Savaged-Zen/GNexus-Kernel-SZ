@@ -1,0 +1,54 @@
+***************
+*** 875,881 ****
+  	struct dp83640_clock *clock;
+  	struct list_head *this, *next;
+  	struct dp83640_private *tmp, *dp83640 = phydev->priv;
+- 	struct sk_buff *skb;
+  
+  	if (phydev->addr == BROADCAST_ADDR)
+  		return;
+--- 876,881 ----
+  	struct dp83640_clock *clock;
+  	struct list_head *this, *next;
+  	struct dp83640_private *tmp, *dp83640 = phydev->priv;
+  
+  	if (phydev->addr == BROADCAST_ADDR)
+  		return;
+***************
+*** 883,894 ****
+  	enable_status_frames(phydev, false);
+  	cancel_work_sync(&dp83640->ts_work);
+  
+- 	while ((skb = skb_dequeue(&dp83640->rx_queue)) != NULL)
+- 		kfree_skb(skb);
+- 
+- 	while ((skb = skb_dequeue(&dp83640->tx_queue)) != NULL)
+- 		skb_complete_tx_timestamp(skb, NULL);
+- 
+  	clock = dp83640_clock_get(dp83640->clock);
+  
+  	if (dp83640 == clock->chosen) {
+--- 883,888 ----
+  	enable_status_frames(phydev, false);
+  	cancel_work_sync(&dp83640->ts_work);
+  
+  	clock = dp83640_clock_get(dp83640->clock);
+  
+  	if (dp83640 == clock->chosen) {
+***************
+*** 1067,1073 ****
+  	struct dp83640_private *dp83640 = phydev->priv;
+  
+  	if (!dp83640->hwts_tx_en) {
+- 		skb_complete_tx_timestamp(skb, NULL);
+  		return;
+  	}
+  	skb_queue_tail(&dp83640->tx_queue, skb);
+--- 1061,1067 ----
+  	struct dp83640_private *dp83640 = phydev->priv;
+  
+  	if (!dp83640->hwts_tx_en) {
++ 		kfree_skb(skb);
+  		return;
+  	}
+  	skb_queue_tail(&dp83640->tx_queue, skb);
