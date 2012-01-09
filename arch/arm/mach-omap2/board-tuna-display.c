@@ -463,6 +463,7 @@ static const struct s6e8aa0_sequence_entry tuna_oled_seq_etc_set_sm2[] = {
 };
 
 static const struct s6e8aa0_gamma_entry tuna_oled_gamma_table_m3[] = {
+
 	{       BV_0, { 4500000, 4500000, 4500000, }, },
 	{ 0x00000001, { 4350000, 4350000, 4350000, }, },
 	{ 0x0001F8F0, { 4320166, 4338185, 4200000, }, },
